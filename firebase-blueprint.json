@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "Loan": {
+      "title": "Loan",
+      "description": "Represents a small loan issued to a client.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the lender who owns this loan record."
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Full name of the client."
+        },
+        "clientAddress": {
+          "type": "string",
+          "description": "Physical or residential address of the client."
+        },
+        "clientPhone": {
+          "type": "string",
+          "description": "Phone number of the client."
+        },
+        "principal": {
+          "type": "number",
+          "description": "Principal amount loaned to the client."
+        },
+        "loanTerm": {
+          "type": "string",
+          "description": "Term or duration of the loan (e.g. 30 days, 3 months)."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Due date for the loan repayment."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes or collateral details."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "settled"],
+          "description": "Current status of the loan."
+        },
+        "totalPaid": {
+          "type": "number",
+          "description": "Sum of all payments made towards the loan."
+        },
+        "remainingBalance": {
+          "type": "number",
+          "description": "Remaining unpaid balance."
+        },
+        "settledAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the loan was marked as settled."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp. Submitted as server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp. Submitted as server timestamp."
+        }
+      },
+      "required": ["userId", "clientName", "clientAddress", "clientPhone", "principal", "loanTerm", "dueDate", "status", "totalPaid", "remainingBalance", "createdAt", "updatedAt"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Represents a repayment installment made towards a specific loan.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the lender."
+        },
+        "loanId": {
+          "type": "string",
+          "description": "ID of the loan."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount paid in this installment."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date the payment was received."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes, payment method, or receipt number."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        }
+      },
+      "required": ["userId", "loanId", "amount", "paymentDate", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/loans/{loanId}": {
+      "schema": {
+        "$ref": "#/entities/Loan"
+      },
+      "description": "Collection of loans managed by the user."
+    },
+    "/users/{userId}/loans/{loanId}/payments/{paymentId}": {
+      "schema": {
+        "$ref": "#/entities/Payment"
+      },
+      "description": "Installment payments made by the client for this loan."
+    }
+  }
+}

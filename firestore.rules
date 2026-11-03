@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidLoan(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.clientName is string && data.clientName.size() > 0 && data.clientName.size() <= 100 &&
+             data.clientAddress is string && data.clientAddress.size() > 0 && data.clientAddress.size() <= 200 &&
+             data.clientPhone is string && data.clientPhone.size() > 0 && data.clientPhone.size() <= 30 &&
+             data.principal is number && data.principal > 0 &&
+             data.loanTerm is string && data.loanTerm.size() > 0 && data.loanTerm.size() <= 100 &&
+             data.dueDate is string && data.dueDate.size() > 0 && data.dueDate.size() <= 50 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+             data.status in ['active', 'settled'] &&
+             data.totalPaid is number && data.totalPaid >= 0 &&
+             data.remainingBalance is number &&
+             (!('settledAt' in data) || data.settledAt == null || (data.settledAt is timestamp && data.settledAt <= request.time));
+    }
+
+    function isValidPayment(data, loanId) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.loanId is string && data.loanId == loanId &&
+             data.amount is number && data.amount > 0 &&
+             data.paymentDate is string && data.paymentDate.size() > 0 && data.paymentDate.size() <= 50 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300));
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /loans/{loanId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'clientName', 'clientAddress', 'clientPhone', 'principal', 'loanTerm', 'dueDate', 'status', 'totalPaid', 'remainingBalance', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'clientName', 'clientAddress', 'clientPhone', 'principal', 'loanTerm', 'dueDate', 'notes', 'status', 'totalPaid', 'remainingBalance', 'settledAt', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidLoan(incoming());
+
+        allow update: if isOwner(userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidLoan(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['clientName', 'clientAddress', 'clientPhone', 'principal', 'loanTerm', 'dueDate', 'notes', 'status', 'totalPaid', 'remainingBalance', 'settledAt', 'updatedAt']);
+
+        allow delete: if isOwner(userId);
+
+        match /payments/{paymentId} {
+          allow get, list: if isOwner(userId);
+
+          allow create: if isOwner(userId) &&
+                           incoming().userId == request.auth.uid &&
+                           incoming().loanId == loanId &&
+                           incoming().keys().hasAll(['userId', 'loanId', 'amount', 'paymentDate', 'createdAt']) &&
+                           incoming().keys().hasOnly(['userId', 'loanId', 'amount', 'paymentDate', 'notes', 'createdAt']) &&
+                           incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                           isValidPayment(incoming(), loanId);
+
+          allow update: if isOwner(userId) &&
+                           incoming().userId == existing().userId &&
+                           incoming().loanId == existing().loanId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidPayment(incoming(), loanId) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['amount', 'paymentDate', 'notes']);
+
+          allow delete: if isOwner(userId);
+        }
+      }
+    }
+  }
+}

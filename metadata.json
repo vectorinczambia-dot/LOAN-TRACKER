@@ -1,0 +1,6 @@
+{
+  "name": "LoanTracker",
+  "description": "Simple loan tracking for small loans, client details, payment installments, and balance settlement.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
